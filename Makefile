@@ -1,7 +1,7 @@
 EXEC = hw4_mm_test
 TARGETS = $(EXEC)
 CC := gcc
-override CFLAGS += -O3 -Wall
+override CFLAGS += -O3 -Wall -g
 OBJS = hw4_mm_test.o ./lib/hw_malloc.o
 SUBDIR = ./lib
 GIT_HOOKS := .git/hooks/applied

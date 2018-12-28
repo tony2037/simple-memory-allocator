@@ -62,6 +62,13 @@ int main(int argc, char *argv[])
     printf("size of chunk_info_t: %d", (int)sizeof(struct chunk_info_t));
     printf("size of void*: %d", (int)sizeof(void*));
     printf("size of Header: %d\n", (int)sizeof(struct Header));
+    
+    brkInit();
+    printf("start brk: %p\nheap  top: %p\n", start_brk, heap_top);
+
+    // Bin init
+    BinInit();
+    // shell 
     shell();
     return 0;
 }
