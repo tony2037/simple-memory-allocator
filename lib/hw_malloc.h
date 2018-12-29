@@ -17,12 +17,13 @@ struct Header{
     struct chunk_info_t chunk_info;
 };
 
-struct Header *Bin[11];
+struct Header *Bin[12];
 
 void *hw_malloc(size_t bytes);
 int hw_free(void *mem);
 void *get_start_sbrk(void);
 void brkInit();
 void BinInit();
+void printfBinary(unsigned int bin);
 
 #endif

@@ -31,8 +31,8 @@ void brkInit()
 void BinInit(){
     void *ptr;
     ptr = heap_top;
-    for(size_t i = 0; i < 11; ++i){
-	Bin[i] = malloc(sizeof(struct Header *));
+    for(size_t i = 0; i < 12; ++i){
+	Bin[i] = malloc(sizeof(struct Header*));
 	Bin[i]->prev = (void *)Bin[i];
 	Bin[i]->next = NULL;
     }
@@ -48,22 +48,38 @@ void BinInit(){
 	    ++j;
 	    size = size >> 1;
 	}
-	Bin[j - 5]->next = ptr;
+	Bin[j - 4]->next = ptr;
         struct Header *temp = ptr;
-        temp->prev = Bin[j - 5];
+        temp->prev = Bin[j - 4];
         temp->next = NULL;
         temp->chunk_info.PrevSize_AllcFlg = 0;
 	unsigned int CurSize = ptr - start_brk;
         temp->chunk_info.CurSize_MFlg = (CurSize) << 1;	
-    }while(j > 5);
-
-    for(size_t i = 0; i < 11; ++i){
+    }while(j > 4);
+    
+    for(size_t i = 0; i < 12; ++i){
         struct Header *ptr = Bin[i];
 	printf("Bin[%d]: \n", (int)i);
 	while(ptr->next != NULL){
 	    ptr = ptr->next;
 	}
-	    printf("PrevSize_AllcFlg: %d\n", ptr->chunk_info.PrevSize_AllcFlg);
-	    printf("CurSize_MFlg: %d\n", ptr->chunk_info.CurSize_MFlg);
+	printf("PrevSize_AllcFlg: ");
+	printfBinary(ptr->chunk_info.PrevSize_AllcFlg);
+	printf("\n");
+	printf("CurSize_MFlg    : ");
+	printfBinary(ptr->chunk_info.CurSize_MFlg);
+	printf("\n");
     }
 }
+
+
+
+void printfBinary(unsigned int bin)
+{
+    unsigned int i;
+    for(i = 1 << 31; i > 0; i = i / 2){
+        (bin & i)? printf("1") : printf("0");
+    }
+}
+
+
