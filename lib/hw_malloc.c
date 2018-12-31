@@ -7,6 +7,14 @@
 
 void *hw_malloc(size_t bytes)
 {
+    unsigned int required_size = (unsigned int)bytes + (unsigned int)sizeof(struct Header);
+    printf("hw_malloc required size: %d\n", required_size);
+
+    int power = 0;
+    while((1 << (power)) < required_size){++power;};
+    printf("power required: %d\n", power);
+
+    // if Bin 
     return NULL;
 }
 
@@ -17,7 +25,7 @@ int hw_free(void *mem)
 
 void *get_start_sbrk(void)
 {
-    return NULL;
+    return start_brk;
 }
 
 
@@ -63,12 +71,15 @@ void BinInit(){
 	while(ptr->next != NULL){
 	    ptr = ptr->next;
 	}
+	/*
 	printf("PrevSize_AllcFlg: ");
 	printfBinary(ptr->chunk_info.PrevSize_AllcFlg);
 	printf("\n");
 	printf("CurSize_MFlg    : ");
 	printfBinary(ptr->chunk_info.CurSize_MFlg);
 	printf("\n");
+	*/
+	printfHeader(ptr);
     }
 }
 
@@ -81,5 +92,62 @@ void printfBinary(unsigned int bin)
         (bin & i)? printf("1") : printf("0");
     }
 }
+
+
+
+void split(size_t index)
+{
+    if((int)index == 0)
+        return;
+
+    if(Bin[index]->next == NULL){
+        // Need to split the next Bin
+	split(index + 1);
+	return;
+    }
+    else{
+        struct Header *hdr0, *hdr1;
+	hdr0 = Bin[index]->next;
+	Bin[index]->next = hdr0->next;
+        hdr1 = hdr0 + (1 << (index - 1));
+
+        hdr0->chunk_info.PrevSize_AllcFlg = 1 << index; // (1 << (index -1)) << 1;
+        hdr0->chunk_info.CurSize_MFlg = 1 << index; // (1 << (index -1)) << 1;
+        hdr1->chunk_info.PrevSize_AllcFlg = 1 << index; // (1 << (index -1)) << 1;
+        hdr1->chunk_info.CurSize_MFlg = 1 << index; // (1 << (index -1)) << 1;
+
+	hdr0->next = (void *)hdr1;
+        hdr1->next = NULL;
+	hdr1->prev = (void *)hdr0;
+
+	struct Header *tmp;
+	tmp = Bin[index - 1];
+	while(tmp->next != NULL){
+	    tmp = (struct Header *)tmp->next;
+	}
+	tmp->next = hdr0;
+	hdr0->prev = (void *)tmp;
+	return;
+    }
+
+}
+
+
+
+void printfHeader(struct Header *header)
+{
+    printf("Header address: %p\n", header);
+    (header->prev == NULL)? printf("Header prev address NULL\n") : printf("Header prev address: %p\n", header->prev);
+    (header->next == NULL)? printf("Header next address NULL\n") : printf("Header next address: %p\n", header->next);
+    printf("Header chunk_info\n");
+    printf("PrevSize_AllcFlg: ");
+    printfBinary(header->chunk_info.PrevSize_AllcFlg);
+    printf("\n");
+    printf("CurSize_MFlg    : ");
+    printfBinary(header->chunk_info.CurSize_MFlg);
+    printf("\n");
+    return;
+}
+
 
 

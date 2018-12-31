@@ -25,5 +25,7 @@ void *get_start_sbrk(void);
 void brkInit();
 void BinInit();
 void printfBinary(unsigned int bin);
+void split(size_t index);
+void printfHeader(struct Header *header);
 
 #endif
