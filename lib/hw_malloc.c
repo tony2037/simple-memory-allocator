@@ -14,8 +14,30 @@ void *hw_malloc(size_t bytes)
     while((1 << (power)) < required_size){++power;};
     printf("power required: %d\n", power);
 
-    // if Bin 
-    return NULL;
+    // Because Bin[0] = 2^4 Bin[power - 4] = 2^ power;
+    power -= 4;
+
+    // if Bin accessable give it, if not split
+    while(Bin[power]->next == NULL){
+        // no accessable, split
+        split(power + 1);
+    }
+    if(Bin[power]->next != NULL){
+        // accessable
+	struct Header *ptr;
+	ptr = Bin[power]->next;
+	while(ptr->next != NULL){
+	    ptr = (struct Header *)ptr->next;
+	}
+	// now ptr is the tail of the linked list
+	((struct Header *)ptr->prev)->next = NULL;
+        ptr->prev = (void *)ptr;
+	ptr->next = NULL;
+        ptr->chunk_info.PrevSize_AllcFlg = ptr->chunk_info.PrevSize_AllcFlg | 0x1;
+	return ptr;
+    }
+    else
+        return NULL;
 }
 
 int hw_free(void *mem)
@@ -100,21 +122,29 @@ void split(size_t index)
     if((int)index == 0)
         return;
 
+    if((int)index > 11){
+        printf("Run out of memory \n");
+	exit(0);
+    }
+
     if(Bin[index]->next == NULL){
         // Need to split the next Bin
 	split(index + 1);
-	return;
     }
-    else{
+    
+    if(Bin[index]->next != NULL){
         struct Header *hdr0, *hdr1;
 	hdr0 = Bin[index]->next;
 	Bin[index]->next = hdr0->next;
-        hdr1 = hdr0 + (1 << (index - 1));
+	void *hdr1_, *hdr0_;
+	hdr0_ = (void *) hdr0;
+        hdr1_ = hdr0_ + (1 << ((index + 4) - 1));
+	hdr1 = (struct Header *)hdr1_;
 
-        hdr0->chunk_info.PrevSize_AllcFlg = 1 << index; // (1 << (index -1)) << 1;
-        hdr0->chunk_info.CurSize_MFlg = 1 << index; // (1 << (index -1)) << 1;
-        hdr1->chunk_info.PrevSize_AllcFlg = 1 << index; // (1 << (index -1)) << 1;
-        hdr1->chunk_info.CurSize_MFlg = 1 << index; // (1 << (index -1)) << 1;
+        hdr0->chunk_info.PrevSize_AllcFlg = 1 << (index + 4); // (1 << ((index + 4) -1)) << 1;
+        hdr0->chunk_info.CurSize_MFlg = 1 << (index + 4); // (1 << ((index + 4) -1)) << 1;
+        hdr1->chunk_info.PrevSize_AllcFlg = 1 << (index + 4); // (1 << ((index + 4) -1)) << 1;
+        hdr1->chunk_info.CurSize_MFlg = 1 << (index + 4); // (1 << ((index + 4) -1)) << 1;
 
 	hdr0->next = (void *)hdr1;
         hdr1->next = NULL;

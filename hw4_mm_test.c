@@ -42,6 +42,7 @@ int shell(){
 	    //printf("a\n");
 	    void *ptr;
             ptr = hw_malloc(atoi(param));
+	    printf("Get the allocated address: %p\n", ptr);
 	}
 	else if(!strcmp(command, "free")){
 	    //printf("f\n");
