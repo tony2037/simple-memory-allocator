@@ -42,6 +42,8 @@ int shell(){
 	    //printf("a\n");
 	    void *ptr;
             ptr = hw_malloc(atoi(param));
+            mllocAddr.addrList[mllocAddr.i++] = ptr;
+
 	    printf("Get the allocated address: %p\n", ptr);
 	}
 	else if(!strcmp(command, "free")){
@@ -67,9 +69,14 @@ int main(int argc, char *argv[])
     brkInit();
     printf("start brk: %p\nheap  top: %p\n", start_brk, heap_top);
 
+    // mllocAddr init
+    MallocAddrInit();
     // Bin init
     BinInit();
     // shell 
     shell();
+
+    // printf mallocated address list
+    printfAllocAddr();
     return 0;
 }

@@ -10,38 +10,79 @@ void *hw_malloc(size_t bytes)
     unsigned int required_size = (unsigned int)bytes + (unsigned int)sizeof(struct Header);
     printf("hw_malloc required size: %d\n", required_size);
 
-    int power = 0;
-    while((1 << (power)) < required_size){++power;};
-    printf("power required: %d\n", power);
+    if(required_size <= (1 << 15)){
+	// Use heap to mallocate
+        int power = 0;
+        while((1 << (power)) < required_size){++power;};
+        printf("power required: %d\n", power);
 
-    // Because Bin[0] = 2^4 Bin[power - 4] = 2^ power;
-    power -= 4;
+        // Because Bin[0] = 2^4 Bin[power - 4] = 2^ power;
+        power -= 4;
 
-    // if Bin accessable give it, if not split
-    while(Bin[power]->next == NULL){
-        // no accessable, split
-        split(power + 1);
+        // if Bin accessable give it, if not split
+        while(Bin[power]->next == NULL){
+            // no accessable, split
+            split(power + 1);
+        }
+        if(Bin[power]->next != NULL){
+            // accessable
+	    struct Header *ptr;
+	    ptr = Bin[power]->next;
+	    while(ptr->next != NULL){
+	        ptr = (struct Header *)ptr->next;
+	    }
+	    // now ptr is the tail of the linked list
+	    ((struct Header *)ptr->prev)->next = NULL;
+            ptr->prev = (void *)ptr;
+	    ptr->next = NULL;
+            ptr->chunk_info.PrevSize_AllcFlg = ptr->chunk_info.PrevSize_AllcFlg | 0x1;
+
+	    mllocAddr.addrList[i++] = ptr;
+            printfAllocAddr();
+
+	    return ptr;
+        }
+        else
+            return NULL;
+
     }
-    if(Bin[power]->next != NULL){
-        // accessable
-	struct Header *ptr;
-	ptr = Bin[power]->next;
-	while(ptr->next != NULL){
-	    ptr = (struct Header *)ptr->next;
-	}
-	// now ptr is the tail of the linked list
-	((struct Header *)ptr->prev)->next = NULL;
-        ptr->prev = (void *)ptr;
-	ptr->next = NULL;
-        ptr->chunk_info.PrevSize_AllcFlg = ptr->chunk_info.PrevSize_AllcFlg | 0x1;
+    else{
+        // use mmap to distribute
+        void *ptr;
+        ptr = mmap(NULL, (bytes + sizeof(struct Header)), PROT_WRITE|PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
+        struct Header *header = ptr;
+        header->prev = header;
+	header->next = NULL;
+	header->chunk_info.PrevSize_AllcFlg = required_size << 1;
+	header->chunk_info.CurSize_MFlg = (required_size << 1) + 1;
+
+	mllocAddr.addrList[i++] = ptr;
+        printfAllocAddr();
+
 	return ptr;
     }
-    else
-        return NULL;
+
 }
 
 int hw_free(void *mem)
 {
+    if(!checkAddr(mem)){
+        printf("This address is not mallocated\n");
+	return 0;
+    }
+    else{
+        struct Header *ptr = mem;
+	if((ptr->chunk_info.PrevSize_AllcFlg & 0x1)){
+	    // allocate address
+	    putBin(mem);
+	}
+	else if((ptr->chunk_info.CurSize_MFlg & 0x1)){
+	    // mmap address
+	}
+
+
+
+    }
     return 0;
 }
 
@@ -49,6 +90,68 @@ void *get_start_sbrk(void)
 {
     return start_brk;
 }
+
+
+
+void putBin(void *mem)
+{
+    // allocated address
+    struct Header *ptr = mem;
+    void *bd;
+    size_t i = 0;
+    int ifMerge = 0;
+	    
+    bd = mem + (ptr->chunk_info.CurSize_MFlg >> 1);
+    while(i != (ptr->chunk_info.CurSize_MFlg >> 1)){i = i << 1;}
+    i = i - 4;
+	    
+    struct Header *tmp;
+    tmp = Bin[i];
+    while(tmp->next != NULL){
+        if(tmp == bd){
+            ifMerge = 1;
+	    break;
+	}
+	tmp = tmp->next;
+    }
+
+    if(ifMerge){
+        // merge
+	// split from the linked list of bin
+	if(tmp->next == NULL){
+	    // tmp is the tail
+	    ((struct Header *)tmp->prev)->next = NULL;
+	}
+	else{
+	    ((struct Header *)tmp->prev)->next = tmp->next;
+	    ((struct Header *)tmp->next)->prev = tmp->prev;
+	}
+	// change the chunk_info
+	ptr->chunk_info.PrevSize_AllcFlg = (ptr->chunk_info.PrevSize_AllcFlg & 0xFFFFFFFE) << 1;
+	ptr->chunk_info.CurSize_MFlg = (ptr->chunk_info.CurSize_MFlg & 0xFFFFFFFE) << 1;
+        
+	// try to put back to bin
+	putBin(ptr);
+    }
+    else{
+        // Don't need to merge
+	// change the chunk_info
+	ptr->chunk_info.PrevSize_AllcFlg = (ptr->chunk_info.PrevSize_AllcFlg & 0xFFFFFFFE);
+	ptr->chunk_info.CurSize_MFlg = (ptr->chunk_info.CurSize_MFlg & 0xFFFFFFFE);
+        ptr->next = NULL;
+
+        // put back to Bin	
+        tmp = Bin[i];
+        while(tmp->next != NULL){
+	    tmp = tmp->next;
+        }
+	
+	tmp->next = ptr;
+	ptr->prev = tmp;
+    }
+            
+}
+
 
 
 void brkInit()
@@ -134,8 +237,22 @@ void split(size_t index)
     
     if(Bin[index]->next != NULL){
         struct Header *hdr0, *hdr1;
+
+	struct Header *tail;
+	tail = Bin[index]->next;
+	while(tail->next != NULL)
+            tail = (struct Header *)tail->next;
+	// now we got the tail
+	((struct Header *)tail->prev)->next = NULL;
+	tail->prev = tail;
+	tail->next = NULL;
+	hdr0 = tail;
+	
+	/*
 	hdr0 = Bin[index]->next;
 	Bin[index]->next = hdr0->next;
+        */
+
 	void *hdr1_, *hdr0_;
 	hdr0_ = (void *) hdr0;
         hdr1_ = hdr0_ + (1 << ((index + 4) - 1));
@@ -178,6 +295,36 @@ void printfHeader(struct Header *header)
     printf("\n");
     return;
 }
+
+
+
+void MallocAddrInit()
+{
+    mllocAddr.i = 0;
+}
+
+
+
+void printfAllocAddr()
+{
+    printf("The allocated address list:\n");
+    for(size_t j = 0; j < mllocAddr.i; ++j){
+        if(mllocAddr.addrList[j] != NULL)
+	    printf("%p\n", mllocAddr.addrList[j]);
+    }
+}
+
+
+
+int checkAddr(void *mem)
+{
+    for(size_t j = 0; j < mllocAddr.i; ++j){
+        if(mllocAddr.addrList[j] == mem)
+            return 1;
+    }
+    return 0;
+}
+
 
 
 
