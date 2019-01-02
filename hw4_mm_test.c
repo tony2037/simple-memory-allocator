@@ -48,9 +48,18 @@ int shell(){
 	}
 	else if(!strcmp(command, "free")){
 	    //printf("f\n");
+	    long int address = (long int)strtol(param, NULL, 0);
+	    void *mem = (void *)address;
+	    if(hw_free(mem)){
+	        printf("free successfully\n");
+	    }
 	}
 	else if(!strcmp(command, "print")){
 	    //printf("p\n");
+	    if(!strcmp(param, "mmap_alloc_list")){
+                printfAllocAddr();
+	    }
+	    
 	}
 	else{
 	    printf("No such command\n");

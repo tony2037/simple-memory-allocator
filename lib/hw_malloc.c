@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/mman.h>
 #include "hw_malloc.h"
 
 
@@ -37,8 +38,6 @@ void *hw_malloc(size_t bytes)
 	    ptr->next = NULL;
             ptr->chunk_info.PrevSize_AllcFlg = ptr->chunk_info.PrevSize_AllcFlg | 0x1;
 
-	    mllocAddr.addrList[i++] = ptr;
-            printfAllocAddr();
 
 	    return ptr;
         }
@@ -56,8 +55,6 @@ void *hw_malloc(size_t bytes)
 	header->chunk_info.PrevSize_AllcFlg = required_size << 1;
 	header->chunk_info.CurSize_MFlg = (required_size << 1) + 1;
 
-	mllocAddr.addrList[i++] = ptr;
-        printfAllocAddr();
 
 	return ptr;
     }
@@ -75,9 +72,13 @@ int hw_free(void *mem)
 	if((ptr->chunk_info.PrevSize_AllcFlg & 0x1)){
 	    // allocate address
 	    putBin(mem);
+	    mllocAddr.addrList[checkAddr(mem) - 1] = NULL;
 	}
 	else if((ptr->chunk_info.CurSize_MFlg & 0x1)){
 	    // mmap address
+	    size_t length = ptr->chunk_info.CurSize_MFlg >> 1;
+	    munmap(mem, length);
+	    mllocAddr.addrList[checkAddr(mem) - 1] = NULL;
 	}
 
 
@@ -102,7 +103,7 @@ void putBin(void *mem)
     int ifMerge = 0;
 	    
     bd = mem + (ptr->chunk_info.CurSize_MFlg >> 1);
-    while(i != (ptr->chunk_info.CurSize_MFlg >> 1)){i = i << 1;}
+    while((1 << i) != (ptr->chunk_info.CurSize_MFlg >> 1)){i += 1;}
     i = i - 4;
 	    
     struct Header *tmp;
@@ -301,6 +302,9 @@ void printfHeader(struct Header *header)
 void MallocAddrInit()
 {
     mllocAddr.i = 0;
+    for(size_t i = 0; i < 20; ++i){
+        mllocAddr.addrList[i] = NULL;
+    }
 }
 
 
@@ -309,8 +313,10 @@ void printfAllocAddr()
 {
     printf("The allocated address list:\n");
     for(size_t j = 0; j < mllocAddr.i; ++j){
-        if(mllocAddr.addrList[j] != NULL)
-	    printf("%p\n", mllocAddr.addrList[j]);
+        if(mllocAddr.addrList[j] != NULL){
+	    //printf("%p\n", mllocAddr.addrList[j]);
+	    printfHeader(mllocAddr.addrList[j]);
+	}
     }
 }
 
@@ -320,7 +326,7 @@ int checkAddr(void *mem)
 {
     for(size_t j = 0; j < mllocAddr.i; ++j){
         if(mllocAddr.addrList[j] == mem)
-            return 1;
+            return j + 1;
     }
     return 0;
 }
