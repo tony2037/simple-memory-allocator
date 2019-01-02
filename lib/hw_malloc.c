@@ -334,3 +334,52 @@ int checkAddr(void *mem)
 
 
 
+int printfBin(char *param)
+{
+    struct Header *ptr;
+    if(!strcmp(param, "bin[0]")){
+        ptr = Bin[0];
+    }
+    else if(!strcmp(param, "bin[1]")){
+        ptr = Bin[1];
+    }
+    else if(!strcmp(param, "bin[2]")){
+        ptr = Bin[2];
+    }
+    else if(!strcmp(param, "bin[3]")){
+        ptr = Bin[3];
+    }
+    else if(!strcmp(param, "bin[4]")){
+        ptr = Bin[4];
+    }
+    else if(!strcmp(param, "bin[5]")){
+        ptr = Bin[5];
+    }
+    else if(!strcmp(param, "bin[6]")){
+        ptr = Bin[6];
+    }
+    else if(!strcmp(param, "bin[7]")){
+        ptr = Bin[7];
+    }
+    else if(!strcmp(param, "bin[8]")){
+        ptr = Bin[8];
+    }
+    else if(!strcmp(param, "bin[9]")){
+        ptr = Bin[9];
+    }
+    else if(!strcmp(param, "bin[10]")){
+        ptr = Bin[10];
+    }
+    else 
+        return 0;
+
+    while(ptr->next != NULL){
+	ptr = ptr->next;
+        printfHeader(ptr);
+    }
+
+    return 1;
+}
+
+
+

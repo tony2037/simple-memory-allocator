@@ -37,5 +37,6 @@ void printfHeader(struct Header *header);
 void printfAllocAddr();
 int checkAddr(void *mem);
 void putBin(void *mem);
+int printfBin(char *param);
 
 #endif

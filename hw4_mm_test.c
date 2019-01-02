@@ -59,6 +59,9 @@ int shell(){
 	    if(!strcmp(param, "mmap_alloc_list")){
                 printfAllocAddr();
 	    }
+	    else{
+	        printfBin(param);
+	    }
 	    
 	}
 	else{
